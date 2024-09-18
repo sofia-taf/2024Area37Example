@@ -9,15 +9,14 @@ taf.library(SOFIA)
 suppressMessages(library(dplyr))  # filter, group_by, mutate, summarise, ungroup
 library(ggplot2)  # aes, geom_line, geom_point, ggplot, ggsave, ggtitle
 library(sraplus)  # plot_driors
-library(tidyr)    # nest, pivot_longer
+library(tidyr)    # nest
 
 mkdir("data")
 
-## Read catch data, convert to tibble (long format)
+## Read catch data, convert to long format
 catch <- read.taf("bootstrap/data/catch.csv")
 catch$Total <- NULL  # not used, not a stock
-catch <- pivot_longer(catch, !Year, "stock", values_to="capture")
-names(catch) <- tolower(names(catch))
+catch <- taf2long(catch, c("year", "stock", "capture"))
 
 ## Plot catch
 catch %>%
@@ -31,7 +30,7 @@ ggsave("data/catch_total.png", width=12, height=6)
 catch %>%
   ggplot(aes(year, capture, color=stock)) +
   geom_line(show.legend=FALSE) +
-  addDrorsgeom_point()
+  geom_point()
 ggsave("data/catch_by_stock.png", width=12, height=6)
 
 ## Select stocks with min 10 years of non-zero catches...
@@ -57,9 +56,8 @@ ggsave("data/catch_relative.png", width=12, height=6)
 
 ## Read effort data, combine catch and effort data
 effort <- read.taf("bootstrap/data/effort.csv")
-effort <- pivot_longer(effort, !Year, "stock", values_to="effort")
-names(effort) <- tolower(names(effort))
-catch_effort <- addEffort(catch, effort, same.effort=TRUE)
+effort <- taf2long(effort, c("year", "stock", "effort"))
+catch_effort <- addEffort(catch, effort, same.effort=FALSE)
 
 ## Create nested tibble with 'data' column (catch and effort)
 stocks <- catch_effort %>%
@@ -71,7 +69,7 @@ stocks <- catch_effort %>%
 priors <- read.taf("bootstrap/data/priors.csv")
 stocks <- addDriors(stocks, priors, same.priors=TRUE)
 
-## driers driors
+## Plot driors
 pdf("data/driors.pdf")
 for(i in seq_len(nrow(stocks)))
 {
